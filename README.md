@@ -56,7 +56,7 @@ Both client and server currently uses the same `jvmArgs` and both are defaulting
 
 ## Development notes
 
-Stack trace is enabled using `--debug=true`.
+Stack trace is enabled using `--debug=`.
 
 ### Suggestions
 
