@@ -1,0 +1,3 @@
+# For dev only
+strip-hints==0.1.10
+autoflake==2.0.0

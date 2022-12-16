@@ -1,0 +1,33 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Create Release
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' # caching pip dependencies
+      - run: pip install -r requirements.txt
+      - name: "Build Python code (removing type hints)"
+        run: |
+          strip-hints --inplace app/benchmark.py
+          autoflake --in-place --remove-unused-variables app/benchmark.py
+          tar --exclude="requirements.txt" -cvf Orchestrator-for-BigData-in-JVM.tar.gz *
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Pre-release Build"
+          files: |
+            Orchestrator-for-BigData-in-JVM.tar.gz
