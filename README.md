@@ -1,12 +1,12 @@
-# Benchmark scripts for running a single-node cluster for benchmarking
+# Orchestrator for BigData in JVM
 
 ## What is this? Why?
 
-These scripts are created to run Cassandra 4 benchmark on a single local machine to gauge performance behavior while developing GC related stuff for OpenJDK.
+These scripts are created to run Cassandra 4.1.0 benchmarks on a single local machine to gauge performance behavior while developing GC related stuff for OpenJDK.
 
 ## Installation
 
-Scripts are included to download and install Cassandra 4.1.0 into the folder `app`. To do this execute `./install_cassandra.sh`. If you prefer manually downloading Cassandra make sure that you copy the patch files in `patch_files` into `app`.
+Download the [latest](https://github.com/JonasNorlinder/Orchestrator-for-BigData-in-JVM/releases/download/latest/Orchestrator-for-BigData-in-JVM.tar.gz) build of this tool. You need Python 3 and a modern version of Linux in order to run this tool. Scripts are included to download and install Cassandra 4.1.0 into the folder `app`. To do this execute `./install_cassandra.sh`. If you prefer manually downloading Cassandra make sure that you copy the patch files in `patch_files` into `app`.
 
 ## Running Cassandra
 
