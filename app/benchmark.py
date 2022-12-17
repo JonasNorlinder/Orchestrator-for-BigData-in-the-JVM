@@ -9,7 +9,7 @@ import time
 import traceback
 from enum import Enum
 import argparse
-from typing import Dict, Final
+from typing import Dict, Final, List
 from multiprocessing import Process
 from shared.utils import ask_y_n, has_key
 
@@ -139,10 +139,14 @@ def block_until_process_is_done(app) -> int:
     return app.returncode
 
 
+def get_server_cpu_affinity_group_raw() -> List[int]:
+    lo: int = 0
+    hi: int = int(CassandraVars.cpu_count/2) - 1 - CassandraVars.skew
+    return [lo, hi]
+
+
 def get_server_cpu_affinity_group() -> str:
-    lo: str = str(0)
-    hi: str = str(int(CassandraVars.cpu_count/2) - 1 - CassandraVars.skew)
-    return "-".join([lo, hi])
+    return "-".join(str(elem) for elem in get_server_cpu_affinity_group_raw())
 
 
 def get_client_cpu_affinity_group() -> str:
@@ -278,14 +282,18 @@ def prepare_database() -> None:
         block_until_process_is_done(copy)
         return
 
-    ask_y_n("It seems that you don't have a prepopulated database which is needed for stable benchmark results. Do you want to generate it now? It takes about 20 minutes and will uses about 4 GB of hard drive space.", prepare_yes, exit_on_no)
+    ask_y_n("It seems that you don't have a prepopulated database which is needed for stable benchmark results. Do you want to generate it now? It takes about 20 minutes and will use about 4 GB of hard drive space.", prepare_yes, exit_on_no)
 
 
 def prepopulate_database(N: int, path: str) -> None:
     init_user_jvm_args()
 
+    taskset_server = get_server_cpu_affinity_group_raw()
+    threads = str(int(taskset_server[1]) - int(taskset_server[0]) + 1)
+    print(f"Using {threads} threads to initialize data")
+
     conf = "user profile="+CassandraVars.base_dir+"/tools/cqlstress-insanity-example.yaml ops\(insert=1\) no-warmup cl=ONE n=" + str(
-        int(N))+" -mode native cql3 -pop seq=1.."+str(N)+" -rate threads=" + CassandraVars.threads
+        int(N))+" -mode native cql3 -pop seq=1.."+str(N)+" -rate threads=" + threads
     add_jvm_option("".join(["-Xlog:gc*:file=", path, "/client.gc"]))
     x = " ".join(["taskset -c " + get_client_cpu_affinity_group(),
                   CassandraVars.cassanadra_stress_bin, conf])
@@ -419,7 +427,6 @@ def init() -> None:
         CassandraVars.debug = True
     else:
         sys.tracebacklimit = 0
-        signal.signal(signal.SIGINT, lambda x, y: sys.exit(signal.SIGINT))
 
     CassandraVars.skew = int(args.skew)
     if abs(CassandraVars.skew) > CassandraVars.cpu_count/2 - 1:
