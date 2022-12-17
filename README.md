@@ -1,4 +1,5 @@
-# Orchestrator for BigData in JVM
+# Orchestrator for BigData in the JVM
+[![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
 ## What is this? Why?
 
