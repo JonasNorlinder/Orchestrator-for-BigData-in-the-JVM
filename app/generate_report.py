@@ -2,9 +2,12 @@
 
 from typing import Dict, Final, List
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 import os
 import unicodedata
 import markdown
+import textwrap
 from shared.utils import has_key
 
 class ReportVars:
@@ -124,6 +127,20 @@ def process_run(tag: str, run: str) -> None:
 
   df.loc[len(df)] = new_row
 
+def produce_violin_plot(df, tags, path):
+    fig, ax = plt.subplots()
+    sub_df = df[tags]
+    sns.violinplot(data=sub_df, orient='h', ax=ax)
+    ax.set_yticklabels([textwrap.fill(e, 10) for e in list(sub_df.columns)])
+    plt.tight_layout()
+    name = ""
+    for e in tags:
+      name += e.replace(".", "_").replace("/", "_")
+    file = os.path.join(path, name)
+    ax.figure.savefig(file)
+    return name + ".png"
+
+
 def main() -> None:
   tags = find_tags()
   if len(tags) == 0:
@@ -137,15 +154,24 @@ def main() -> None:
     for run in runs:
       process_run(tag, os.path.join(ReportVars.base_dir, tag, run))
 
+    df = get_dataframe(tag)
 
+    files = list()
+    for e in [[ReportVars.LATENCY_MEAN, ReportVars.LATENCY_MEDIAN],[ReportVars.LATENCY_95, ReportVars.LATENCY_99, ReportVars.LATENCY_999], [ReportVars.LATENCY_MAX], [ReportVars.OP_RATE], [ReportVars.ROW_RATE]]:
+      files.append(produce_violin_plot(df, e, os.path.join(ReportVars.base_dir, tag)))
+    print(files)
     with open(os.path.join(ReportVars.base_dir, tag, "summary.html"), "w") as writeFile:
-      x = markdown.markdown(format_columns(get_dataframe(tag).describe()).to_markdown(), extensions=['markdown.extensions.tables'])
+      x = markdown.markdown(format_columns(df.describe()).to_markdown(), extensions=['markdown.extensions.tables'])
       writeFile.write("<h2>"+tag+"</h2>")
       writeFile.write(x)
       writeFile.write("<hr/>")
       writeFile.write("<h2>"+"Configuration"+"</h2>")
       writeFile.write("Client threads: " + str(ReportVars.threads) + "<br/>")
       writeFile.write("Duration: " + str(ReportVars.duration) + " minutes" +"<br/>")
+      writeFile.write("<hr/>")
+      writeFile.write("<h2>"+"Plots"+"</h2>")
+      for e in files:
+        writeFile.write("<img src=\"" + e + "\" />")
 
 if __name__=="__main__":
   main()
