@@ -200,15 +200,34 @@ launch_service()
     # Startup CassandraDaemon, background it, and write the pid.
     else
         if [ "x$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" != "x" ]; then
-            FILE="$(dirname -- "$0")/PERF"
-            if [ -f "$FILE" ]; then
-                PERF=$(head -n 1 $FILE)
+            PERF_FILE="$(dirname -- "$0")/PERF"
+            TIME_FILE="$(dirname -- "$0")/TIME"
+
+            if [ -f "${PERF_FILE}" ]; then
+                PERF=$(head -n 1 ${PERF_FILE})
                 exec echo "Using perf" <&- &
-                exec perf stat -e "$PERF" $NUMACTL "$JAVA" $JVM_OPTS "$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" $cassandra_parms -cp "$CLASSPATH" $props "$class" <&- &
+                if [ -f "${TIME_FILE}" ]; then
+                    exec echo "Using time" <&- &
+                    exec /usr/bin/time --verbose perf stat -e "$PERF" "$JAVA" $JVM_OPTS "$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" $cassandra_parms -cp "$CLASSPATH" $props "$class" <&- &
+                else
+                    exec echo "Not using time" <&- &
+                    exec perf stat -e "$PERF" "$JAVA" $JVM_OPTS "$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" $cassandra_parms -cp "$CLASSPATH" $props "$class" <&- &
+                fi
+
             else
+
                 exec echo "Not using perf" <&- &
-                exec $NUMACTL "$JAVA" $JVM_OPTS "$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" $cassandra_parms -cp "$CLASSPATH" $props "$class" <&- &
+                if [ -f "${TIME_FILE}" ]; then
+                    exec echo "Using time" <&- &
+                    exec /usr/bin/time --verbose "$JAVA" $JVM_OPTS "$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" $cassandra_parms -cp "$CLASSPATH" $props "$class" <&- &
+                else
+                    exec echo "Not using time" <&- &
+                    exec "$JAVA" $JVM_OPTS "$JVM_ON_OUT_OF_MEMORY_ERROR_OPT" $cassandra_parms -cp "$CLASSPATH" $props "$class" <&- &
+                fi
+
             fi
+
+
             [ ! -z "$pidpath" ] && printf "%d" $! > "$pidpath"
             true
         else

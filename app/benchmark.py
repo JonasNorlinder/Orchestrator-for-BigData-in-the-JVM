@@ -28,6 +28,7 @@ class CassandraVars:
         "/tools/bin/cassandra-stress"
     perf: str = ""
     perf_file: Final[str] = base_dir + "/bin/PERF"
+    time_file: Final[str] = base_dir + "/bin/TIME"
     java_dir: Dict = {"client": "", "server": ""}
     user_jvm_args: str = ""
     user_jvm_server_args: str = ""
@@ -151,7 +152,7 @@ def get_server_cpu_affinity_group() -> str:
 
 def get_client_cpu_affinity_group() -> str:
     lo: str = str(int(CassandraVars.cpu_count/2) - CassandraVars.skew)
-    hi: str = str(CassandraVars.cpu_count) - 1
+    hi: str = str(CassandraVars.cpu_count - 1)
     return "-".join([lo, hi])
 
 
@@ -172,6 +173,18 @@ def validate_perf() -> None:
         current += l
     if block_until_process_is_done(app) != 0:
         print("Validation failed: supplied perf event list seems to be broken", flush=True)
+        print(current)
+        raise Exception()
+
+
+def validate_time() -> None:
+    app = subprocess.Popen("/usr/bin/time --verbose echo", shell=True, stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT, universal_newlines=True)
+    current = ""
+    for l in app.stdout:  # type: ignore
+        current += l
+    if block_until_process_is_done(app) != 0:
+        print("Validation failed: time --verbose", flush=True)
         print(current)
         raise Exception()
 
@@ -199,8 +212,8 @@ def validate_jvm_args() -> None:
         validate_jvm_args_run(x, key)
 
 
-def clear_perf() -> None:
-    x = " ".join(["rm -f", CassandraVars.perf_file])
+def clear_cassandra_meta_conf() -> None:
+    x = " ".join(["rm -f", CassandraVars.perf_file, CassandraVars.time_file])
     delete = subprocess.Popen(x, shell=True)
     block_until_process_is_done(delete)
 
@@ -370,6 +383,8 @@ def init() -> None:
     parser.add_argument(
         "--perf", help="arguments to perf stat -e (default None)")
     parser.add_argument(
+        "--timeVerbose", help="pipe server into time --verbose (default disabled)", action='store_true')
+    parser.add_argument(
         "--jvmArgs", help="args to both client and server JVM (e.g. \"-XX:+UseZGC -XX:+ShowMessageBoxOnError\")")
     parser.add_argument("--jvmClientArgs",
                         help="args to client JVM (e.g. \"-XX:+UseG1GC\")")
@@ -444,13 +459,16 @@ def init() -> None:
     CassandraVars.threads = str(int(args.threads))
     validate_jvm_args()
 
-    clear_perf()
+    clear_cassandra_meta_conf()
     if args.perf is not None:
         CassandraVars.perf = args.perf
         validate_perf()
         with open(CassandraVars.perf_file, "w") as writeFile:
             writeFile.write(args.perf)
-
+    if args.timeVerbose:
+        validate_time()
+        with open(CassandraVars.time_file, "w") as writeFile:
+            writeFile.write("using time")
 
 def exit_on_no():
     print("OK. Exiting...")
