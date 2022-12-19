@@ -151,7 +151,7 @@ def get_server_cpu_affinity_group() -> str:
 
 def get_client_cpu_affinity_group() -> str:
     lo: str = str(int(CassandraVars.cpu_count/2) - CassandraVars.skew)
-    hi: str = str(CassandraVars.cpu_count)
+    hi: str = str(CassandraVars.cpu_count) - 1
     return "-".join([lo, hi])
 
 
