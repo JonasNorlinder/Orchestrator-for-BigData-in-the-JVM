@@ -173,7 +173,7 @@ def validate_perf() -> None:
     if block_until_process_is_done(app) != 0:
         print("Validation failed: supplied perf event list seems to be broken", flush=True)
         print(current)
-        exit(1)
+        raise Exception()
 
 
 def validate_jvm_args_run(x: str, key: str) -> None:
@@ -185,7 +185,7 @@ def validate_jvm_args_run(x: str, key: str) -> None:
     if block_until_process_is_done(app) != 0:
         print("Validation failed: supplied JVM arguments seems to be broken (" + key + ")", flush=True)
         print(current)
-        exit(1)
+        raise Exception()
 
 
 def validate_jvm_args() -> None:
