@@ -107,12 +107,10 @@ def run_cassandra_server(result_path: str) -> None:
     app = subprocess.Popen(x, shell=True, stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT, universal_newlines=True)
 
-    if len(CassandraVars.perf) > 0:
-        p = Process(target=write_in_new_process, args=[result_path, app])
-        p.start()
-        time.sleep(15)
-    else:
-        write_in_new_process(result_path, app)
+    p = Process(target=write_in_new_process, args=[result_path, app])
+    p.start()
+    time.sleep(15)
+
     restore_jvm_opts()
 
 
