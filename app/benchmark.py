@@ -100,8 +100,6 @@ def run_cassandra_server(result_path: str) -> None:
     add_jvm_option(CassandraVars.user_jvm_server_args)
     add_jvm_option("".join(["-Xlog:gc*:file=", result_path, "/server.gc"]))
     add_jvm_option("".join(["-Xlog:gc+stats=debug:file=", result_path, "/server.stats.gc"]))
-    if "vanilla" not in result_path:
-        add_jvm_option("".join(["-Xlog:gc+defer_info:file=", result_path, "/server.defer.gc"]))
     x = " ".join(["taskset -c", get_server_cpu_affinity_group(),
                   CassandraVars.cassandra_bin])
     app = subprocess.Popen(x, shell=True, stdout=subprocess.PIPE,
