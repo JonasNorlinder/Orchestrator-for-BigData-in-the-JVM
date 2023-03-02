@@ -22,6 +22,7 @@ class CassandraVars:
         return cls._instance
 
     base_dir: Final[str] = os.path.dirname(os.path.realpath(__file__))
+    workload: Final[str] = "cqlstress-insanity-example.yaml"
     cassandra_bin: Final[str] = base_dir + "/bin/cassandra"
     nodetool_bin: Final[str] = base_dir + "/bin/nodetool"
     cassanadra_stress_bin: Final[str] = base_dir + \
@@ -84,7 +85,7 @@ def write_configuration(result_path: str) -> None:
         writeFile.write("\n== Cassandra info ==\n")
         writeFile.write("Client threads: " + CassandraVars.threads + "\n")
         writeFile.write("Duration: " + CassandraVars.duration + "\n")
-        writeFile.write("Workload: cqlstress-insanity-example.yaml" + "\n")
+        writeFile.write("Workload: " + CassandraVars.workload + "\n")
 
 
 def write_in_new_process(result_path, app) -> None:
@@ -98,17 +99,18 @@ def run_cassandra_server(result_path: str) -> None:
     init_user_jvm_args()
     add_jvm_option(CassandraVars.user_jvm_server_args)
     add_jvm_option("".join(["-Xlog:gc*:file=", result_path, "/server.gc"]))
+    add_jvm_option("".join(["-Xlog:gc+stats=debug:file=", result_path, "/server.stats.gc"]))
+    if "vanilla" not in result_path:
+        add_jvm_option("".join(["-Xlog:gc+defer_info:file=", result_path, "/server.defer.gc"]))
     x = " ".join(["taskset -c", get_server_cpu_affinity_group(),
                   CassandraVars.cassandra_bin])
     app = subprocess.Popen(x, shell=True, stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT, universal_newlines=True)
 
-    if len(CassandraVars.perf) > 0:
-        p = Process(target=write_in_new_process, args=[result_path, app])
-        p.start()
-        time.sleep(15)
-    else:
-        write_in_new_process(result_path, app)
+    p = Process(target=write_in_new_process, args=[result_path, app])
+    p.start()
+    time.sleep(15)
+
     restore_jvm_opts()
 
 
@@ -119,7 +121,7 @@ def run_cassandra_stress(duration: str, threads: str, result_path: str) -> None:
     add_jvm_option(CassandraVars.user_jvm_client_args)
     add_jvm_option("".join(["-Xlog:gc*:file=", result_path, "/client.gc"]))
     conf = "user profile="+CassandraVars.base_dir + \
-        "/tools/cqlstress-insanity-example.yaml ops\(insert=3,simple1=7\) duration=" + duration + \
+        "/tools/" + CassandraVars.workload + " ops\(insert=3,simple1=7\) duration=" + duration + \
         " no-warmup cl=ONE -pop dist=UNIFORM\(1..100000000\) -mode native cql3 -rate threads=" + threads
     x = " ".join(["taskset -c " + get_client_cpu_affinity_group(),
                   CassandraVars.cassanadra_stress_bin, conf])
@@ -305,7 +307,7 @@ def prepopulate_database(N: int, path: str) -> None:
     threads = str(int(taskset_server[1]) - int(taskset_server[0]) + 1)
     print(f"Using {threads} threads to initialize data")
 
-    conf = "user profile="+CassandraVars.base_dir+"/tools/cqlstress-insanity-example.yaml ops\(insert=1\) no-warmup cl=ONE n=" + str(
+    conf = "user profile="+CassandraVars.base_dir+"/tools/" + CassandraVars.workload + " ops\(insert=1\) no-warmup cl=ONE n=" + str(
         int(N))+" -mode native cql3 -pop seq=1.."+str(N)+" -rate threads=" + threads
     add_jvm_option("".join(["-Xlog:gc*:file=", path, "/client.gc"]))
     x = " ".join(["taskset -c " + get_client_cpu_affinity_group(),
